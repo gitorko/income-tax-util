@@ -33,6 +33,8 @@ public class Main {
     Float EQ_LONG_TERM = 365.0f;
     Float DEBT_LONG_TERM = 1095.0f;
 
+    Map<Integer, Float> epfInterest = Map.of(2024, 8.25f, 2023, 8.15f, 2022, 8.10f);
+
     /**
      * Add all equity mutual funds code to diff exclude.
      */
@@ -46,22 +48,94 @@ public class Main {
     public CommandLineRunner start() {
         return (args) -> {
             Scanner scanner = new Scanner(System.in);
-
-            System.out.print("The tax p&l file path:");
-            System.out.println();
-            String taxpnlFile = scanner.nextLine();
-            System.out.println();
-            System.out.print("The dividend file path:");
-            System.out.println();
-            String dividendFile = scanner.nextLine();
-            System.out.println();
-
-            processDividend(dividendFile);
-            processEquity(taxpnlFile);
-            processDebt(taxpnlFile);
+            System.out.print("1. Zerodha Dividend Summary\n");
+            System.out.print("2. Zerodha P&L Summary\n");
+            System.out.print("3. EPFO Tax\n");
+            String inputType = scanner.nextLine();
+            switch (inputType) {
+                case "1":
+                    System.out.print("The dividend file path:\n");
+                    String dividendFile = scanner.nextLine();
+                    System.out.println();
+                    processDividend(dividendFile);
+                    break;
+                case "2":
+                    System.out.println("Modify Equity Mutual Fund List to differentiate between EQ & Debt\n");
+                    System.out.println("Equity List: " + equityMfList + "\n");
+                    System.out.print("The tax p&l file path:\n");
+                    System.out.println();
+                    String taxpnlFile = scanner.nextLine();
+                    System.out.println();
+                    processEquity(taxpnlFile);
+                    processDebt(taxpnlFile);
+                    break;
+                case "3":
+                    processEpfoTax();
+                    break;
+            }
         };
     }
 
+    private void processEpfoTax() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter Year:");
+        Integer year = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("Enter Previous Year Balance:");
+        Integer previousBalance = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.println("Enter Taxable Component April to March, Refer to EPFO passbook\n");
+        System.out.print("April:");
+        Integer _04Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("May:");
+        Integer _05Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("June:");
+        Integer _06Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("July:");
+        Integer _07Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("August:");
+        Integer _08Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("September:");
+        Integer _09Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("October:");
+        Integer _10Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("November:");
+        Integer _11Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("December:");
+        Integer _12Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("January:");
+        Integer _01Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("February:");
+        Integer _02Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        System.out.print("March:");
+        Integer _03Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
+        List<Integer> pfList = List.of(_04Pf, _05Pf, _06Pf, _07Pf, _08Pf, _09Pf, _10Pf, _11Pf, _12Pf, _01Pf, _02Pf, _03Pf);
+        int index = 11;
+        List<Double> result = new ArrayList<>();
+        Double totalInterest = 0.0;
+        Integer total = 0;
+        Float interestRate = epfInterest.get(year);
+        for (Integer pfEntry : pfList) {
+            Double curInterest = Math.floor(calculatePercentage(pfEntry, interestRate) * (index) / 12);
+            result.add(curInterest);
+            totalInterest = totalInterest + curInterest;
+            total = pfEntry;
+            index--;
+        }
+        double interestOnPrevBalance = Math.floor(calculatePercentage(previousBalance, interestRate));
+        double newBalance = Math.floor(total + previousBalance + totalInterest);
+
+        System.out.println("Taxable Interest, 10(11) first provision: " + totalInterest);
+        System.out.println("Previous Balance Taxable Interest, 10(12) first provision: " + interestOnPrevBalance);
+        System.out.println("New Balance: " + newBalance);
+
+    }
+
+    private String formatNumber(String number) {
+        return number.strip().replaceAll(",", "");
+    }
+
+    private double calculatePercentage(double number, double percentage) {
+        return (number * percentage) / 100;
+    }
 
     private String getQuarter(LocalDate date) {
         int curYear = Year.now().getValue();
@@ -139,7 +213,6 @@ public class Main {
         System.out.println("Total: " + runningTotal);
         System.out.println();
     }
-
 
     @SneakyThrows
     private void processEquity(String fileName) {
