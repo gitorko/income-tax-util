@@ -35,11 +35,6 @@ public class Main {
 
     Map<Integer, Float> epfInterest = Map.of(2024, 8.25f, 2023, 8.15f, 2022, 8.10f);
 
-    /**
-     * Add all equity mutual funds code to diff exclude.
-     */
-    List<String> equityMfList = List.of("INF200K01QU0");
-
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);
     }
@@ -54,26 +49,54 @@ public class Main {
             String inputType = scanner.nextLine();
             switch (inputType) {
                 case "1":
-                    System.out.print("The dividend file path:\n");
+                    System.out.println("Zerodha dividend file path");
                     String dividendFile = scanner.nextLine();
-                    System.out.println();
                     processDividend(dividendFile);
                     break;
                 case "2":
-                    System.out.println("Modify Equity Mutual Fund List to differentiate between EQ & Debt\n");
-                    System.out.println("Equity List: " + equityMfList + "\n");
-                    System.out.print("The tax p&l file path:\n");
-                    System.out.println();
+                    System.out.println("Zerodha tax p&l file path:");
                     String taxpnlFile = scanner.nextLine();
                     System.out.println();
-                    processEquity(taxpnlFile);
-                    processDebt(taxpnlFile);
+                    List<String> equityMfList = initEquityList(taxpnlFile);
+                    processEquity(taxpnlFile, equityMfList);
+                    processDebt(taxpnlFile, equityMfList);
                     break;
                 case "3":
                     processEpfoTax();
                     break;
             }
         };
+    }
+
+    @SneakyThrows
+    private List<String> initEquityList(String fileName) {
+        List<String> equityMfList = new ArrayList<>();
+        try (FileInputStream file = new FileInputStream(new File(fileName))) {
+            XSSFWorkbook workbook = new XSSFWorkbook(file);
+            XSSFSheet sheet = workbook.getSheetAt(2);
+            Iterator<Row> rowIterator = sheet.iterator();
+            Boolean startProcessing = false;
+            Boolean endProcessing = false;
+            while (rowIterator.hasNext()) {
+                Row row = rowIterator.next();
+                String mfName = String.valueOf(row.getCell(1));
+
+                if (mfName.contains("Short Term Trades Debt")) {
+                    endProcessing = true;
+                }
+                if (startProcessing && !endProcessing) {
+                    if (!mfName.equals("null") && !mfName.isEmpty() && !mfName.equals("Symbol") && !mfName.equals("Long Term Trades Equity")) {
+                        equityMfList.add(mfName);
+                    }
+
+                }
+                if (mfName.contains("Short Term Trades Equity")) {
+                    startProcessing = true;
+                }
+            }
+        }
+        System.out.println(equityMfList);
+        return equityMfList;
     }
 
     private void processEpfoTax() {
@@ -215,11 +238,11 @@ public class Main {
     }
 
     @SneakyThrows
-    private void processEquity(String fileName) {
+    private void processEquity(String fileName, List<String> equityMfList) {
         List<List<String>> resultData = getEquityStockData(fileName);
 
         //Processing equity/arbitrage mutual funds
-        resultData.addAll(getMfData(fileName, false));
+        resultData.addAll(getMfData(fileName, false, equityMfList));
 
         Map<String, Float> longTermGainQuarterlyMap = new HashMap<>();
         Map<String, Float> shortTermGainQuarterlyMap = new HashMap<>();
@@ -309,7 +332,7 @@ public class Main {
         }
 
         System.out.println();
-        System.out.println("Equity LTCG Tax Breakup");
+        System.out.println("Equity LTCG Tax (10% after 1 Lakh) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + ltcgFullValueConsideration);
         System.out.println("Cost of acquisition: " + ltcgCostAquisition);
         System.out.println("Profit: " + (ltcgFullValueConsideration - ltcgCostAquisition));
@@ -318,7 +341,7 @@ public class Main {
         System.out.println();
 
         System.out.println();
-        System.out.println("Equity STCG Tax Breakup");
+        System.out.println("Equity STCG Tax (15%) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + stcgFullValueConsideration);
         System.out.println("Cost of acquisition: " + stcgCostAquisition);
         System.out.println("Profit: " + (stcgFullValueConsideration - stcgCostAquisition));
@@ -328,8 +351,8 @@ public class Main {
     }
 
     @SneakyThrows
-    private void processDebt(String fileName) {
-        List<List<String>> resultData = getMfData(fileName, true);
+    private void processDebt(String fileName, List<String> equityMfList) {
+        List<List<String>> resultData = getMfData(fileName, true, equityMfList);
         LocalDate LAST_DATE_OF_DEBT_INDEXATION = LocalDate.of(2023, 3, 31);
         Map<String, Float> longTermGainQuarterlyMap = new HashMap<>();
         Map<String, Float> shortTermGainQuarterlyMap = new HashMap<>();
@@ -426,7 +449,7 @@ public class Main {
         }
 
         System.out.println();
-        System.out.println("Debt LTCG Tax Breakup");
+        System.out.println("Debt LTCG (20%) Tax Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + ltcgFullValueConsideration);
         System.out.println("Cost of acquisition (without indexation): " + ltcgCostAquisition);
         System.out.println("Profit: " + (ltcgFullValueConsideration - ltcgCostAquisition));
@@ -435,7 +458,7 @@ public class Main {
         System.out.println();
 
         System.out.println();
-        System.out.println("Debt STCG Tax Breakup");
+        System.out.println("Debt STCG Tax (Slab Rate) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + stcgFullValueConsideration);
         System.out.println("Cost of acquisition: " + stcgCostAquisition);
         System.out.println("Profit: " + (stcgFullValueConsideration - stcgCostAquisition));
@@ -487,7 +510,7 @@ public class Main {
     }
 
     @SneakyThrows
-    private List<List<String>> getMfData(String fileName, Boolean debtMf) {
+    private List<List<String>> getMfData(String fileName, Boolean debtMf, List<String> equityMfList) {
         List<List<String>> resultData = new ArrayList<>();
         try (FileInputStream file = new FileInputStream(new File(fileName))) {
             XSSFWorkbook workbook = new XSSFWorkbook(file);
@@ -518,13 +541,13 @@ public class Main {
                     if (!rowData.isEmpty() && !rowData.get(0).equals("Symbol")) {
                         if (debtMf) {
                             //debt mutual fund
-                            if (!equityMfList.contains(rowData.get(1))) {
+                            if (!equityMfList.contains(rowData.get(0))) {
                                 resultData.add(rowData);
                                 //System.out.println(rowData);
                             }
                         } else {
                             //equity mutual fund
-                            if (equityMfList.contains(rowData.get(1))) {
+                            if (equityMfList.contains(rowData.get(0))) {
                                 resultData.add(rowData);
                                 //System.out.println(rowData);
                             }
