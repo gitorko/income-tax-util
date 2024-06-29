@@ -3,7 +3,6 @@ package com.demo.zerodhatax;
 import java.io.File;
 import java.io.FileInputStream;
 import java.time.LocalDate;
-import java.time.Year;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -32,6 +31,7 @@ public class Main {
     final String Q5 = "Q5";
     Float EQ_LONG_TERM = 365.0f;
     Float DEBT_LONG_TERM = 1095.0f;
+    Integer currYear;
 
     Map<Integer, Float> epfInterest = Map.of(2024, 8.25f, 2023, 8.15f, 2022, 8.10f);
 
@@ -47,6 +47,9 @@ public class Main {
             System.out.print("2. Zerodha P&L Summary\n");
             System.out.print("3. EPFO Tax\n");
             String inputType = scanner.nextLine();
+
+            System.out.print("Tax Year\n");
+            currYear = Integer.valueOf(scanner.nextLine());
             switch (inputType) {
                 case "1":
                     System.out.println("Zerodha dividend file path");
@@ -161,7 +164,7 @@ public class Main {
     }
 
     private String getQuarter(LocalDate date) {
-        int curYear = Year.now().getValue();
+        int curYear = currYear;
         LocalDate q0 = LocalDate.of(curYear - 1, 4, 1);
         LocalDate q1 = LocalDate.of(curYear - 1, 6, 15);
         LocalDate q2 = LocalDate.of(curYear - 1, 9, 15);
