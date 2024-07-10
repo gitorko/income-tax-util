@@ -48,7 +48,7 @@ public class Main {
             System.out.print("3. EPFO Tax\n");
             String inputType = scanner.nextLine();
 
-            System.out.print("Tax Year\n");
+            System.out.print("Tax Year: ");
             currYear = Integer.valueOf(scanner.nextLine());
             switch (inputType) {
                 case "1":
@@ -104,7 +104,7 @@ public class Main {
 
     private void processEpfoTax() {
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter Year:");
+        System.out.print("EPF Year:");
         Integer year = Integer.valueOf(formatNumber(scanner.nextLine()));
         System.out.print("Enter Previous Year Balance:");
         Integer previousBalance = Integer.valueOf(formatNumber(scanner.nextLine()));
@@ -135,19 +135,21 @@ public class Main {
         Integer _03Pf = Integer.valueOf(formatNumber(scanner.nextLine()));
         List<Integer> pfList = List.of(_04Pf, _05Pf, _06Pf, _07Pf, _08Pf, _09Pf, _10Pf, _11Pf, _12Pf, _01Pf, _02Pf, _03Pf);
         int index = 11;
-        List<Double> result = new ArrayList<>();
+        List<Long> result = new ArrayList<>();
         Double totalInterest = 0.0;
         Integer total = 0;
         Float interestRate = epfInterest.get(year);
+        Integer previous = 0;
         for (Integer pfEntry : pfList) {
-            Double curInterest = Math.floor(calculatePercentage(pfEntry, interestRate) * (index) / 12);
+            long curInterest = Math.round(calculatePercentage((pfEntry - previous), interestRate) * (index) / 12);
+            previous = pfEntry;
             result.add(curInterest);
             totalInterest = totalInterest + curInterest;
             total = pfEntry;
             index--;
         }
-        double interestOnPrevBalance = Math.floor(calculatePercentage(previousBalance, interestRate));
-        double newBalance = Math.floor(total + previousBalance + totalInterest);
+        long interestOnPrevBalance = Math.round(calculatePercentage(previousBalance, interestRate));
+        long newBalance = Math.round(total + previousBalance + totalInterest);
 
         System.out.println("Taxable Interest, 10(11) first provision: " + totalInterest);
         System.out.println("Previous Balance Taxable Interest, 10(12) first provision: " + interestOnPrevBalance);
