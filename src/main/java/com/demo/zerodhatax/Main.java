@@ -173,19 +173,19 @@ public class Main {
         LocalDate q3 = LocalDate.of(curYear - 1, 12, 15);
         LocalDate q4 = LocalDate.of(curYear, 3, 15);
         LocalDate q5 = LocalDate.of(curYear, 3, 31);
-        if (date.isAfter(q0) && date.isBefore(q1)) {
+        if ((date.isAfter(q0) && date.isBefore(q1)) || date.isEqual(q1)) {
             return Q1;
         }
-        if (date.isAfter(q1) && date.isBefore(q2)) {
+        if ((date.isAfter(q1) && date.isBefore(q2)) || date.isEqual(q2)) {
             return Q2;
         }
-        if (date.isAfter(q2) && date.isBefore(q3)) {
+        if ((date.isAfter(q2) && date.isBefore(q3)) || date.isEqual(q3)) {
             return Q3;
         }
-        if (date.isAfter(q3) && date.isBefore(q4)) {
+        if (date.isAfter(q3) && date.isBefore(q4) || date.isEqual(q4)) {
             return Q4;
         }
-        if (date.isAfter(q4) && date.isBefore(q5)) {
+        if (date.isAfter(q4) && date.isBefore(q5) || date.isEqual(q5)) {
             return Q5;
         }
         return "";
@@ -197,11 +197,12 @@ public class Main {
         Map<String, Float> quarterlyDividendMap = new HashMap<>();
         float runningTotal = 0.0f;
         for (List<String> rowData : resultData) {
-            //System.out.println(rowData);
+
             Float amount = Float.valueOf(rowData.get(5));
             runningTotal = runningTotal + amount;
             LocalDate divdendDate = LocalDate.parse(rowData.get(2));
             String quarter = getQuarter(divdendDate);
+            System.out.println(rowData + " " + quarter);
             switch (quarter) {
                 case Q1: {
                     Float value = quarterlyDividendMap.getOrDefault(Q1, 0.0f);
