@@ -260,7 +260,7 @@ public class Main {
         float ltcgSTT = 0.0f;
 
         for (List<String> rowData : resultData) {
-            //System.out.println(rowData);
+            System.out.println(rowData);
             String symbol = rowData.get(0);
             Float profit = Float.valueOf(rowData.get(7));
             LocalDate buyDate = LocalDate.parse(rowData.get(2));
@@ -274,7 +274,6 @@ public class Main {
                 ltcgFullValueConsideration = ltcgFullValueConsideration + sellValue;
                 ltcgCostAquisition = ltcgCostAquisition + buyValue;
                 if (!equityMfList.contains(symbol)) {
-                    ltcgSTT = ltcgSTT + 15.93f;
                     ltcgSTT = ltcgSTT + (buyValue * 0.00102f);
                     ltcgSTT = ltcgSTT + (sellValue * 0.00102f);
                 }
@@ -283,11 +282,12 @@ public class Main {
                 stcgFullValueConsideration = stcgFullValueConsideration + sellValue;
                 stcgCostAquisition = +stcgCostAquisition + buyValue;
                 if (!equityMfList.contains(symbol)) {
-                    stcgSTT = stcgSTT + 15.93f;
                     stcgSTT = stcgSTT + (buyValue * 0.00102f);
                     stcgSTT = stcgSTT + (sellValue * 0.00102f);
                 }
             }
+            System.out.println(stcgSTT);
+            System.out.println(ltcgSTT);
             String quarter = getQuarter(exitDate);
             switch (quarter) {
                 case Q1:
@@ -351,7 +351,7 @@ public class Main {
         System.out.println();
         System.out.println("Equity LTCG Tax (10% after 1 Lakh) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + ltcgFullValueConsideration);
-        System.out.println("Charges: " + ltcgSTT);
+        System.out.println("Charges (Add DP charges manually, 15.93 per sale): " + ltcgSTT);
         System.out.println("Cost of acquisition: " + ltcgCostAquisition);
         System.out.println("Profit: " + (ltcgFullValueConsideration - ltcgCostAquisition));
         System.out.println("Quarter: " + longTermGainQuarterlyMap);
@@ -361,7 +361,7 @@ public class Main {
         System.out.println();
         System.out.println("Equity STCG Tax (15%) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + stcgFullValueConsideration);
-        System.out.println("Charges: " + stcgSTT);
+        System.out.println("Charges (Add DP charges manually, 15.93 per sale): " + stcgSTT);
         System.out.println("Cost of acquisition: " + stcgCostAquisition);
         System.out.println("Profit: " + (stcgFullValueConsideration - stcgCostAquisition));
         System.out.println("Quarter: " + shortTermGainQuarterlyMap);
