@@ -43,28 +43,23 @@ public class Main {
     public CommandLineRunner start() {
         return (args) -> {
             Scanner scanner = new Scanner(System.in);
-            System.out.print("1. Zerodha Dividend Summary\n");
-            System.out.print("2. Zerodha P&L Summary\n");
-            System.out.print("3. EPFO Tax\n");
+            System.out.print("1. Zerodha P&L Summary\n");
+            System.out.print("2. EPFO Tax\n");
             String inputType = scanner.nextLine();
 
             System.out.print("Tax Year: ");
             currYear = Integer.valueOf(scanner.nextLine());
             switch (inputType) {
                 case "1":
-                    System.out.println("Zerodha dividend file path");
-                    String dividendFile = scanner.nextLine();
-                    processDividend(dividendFile);
-                    break;
-                case "2":
                     System.out.println("Zerodha tax p&l file path:");
                     String taxpnlFile = scanner.nextLine();
                     System.out.println();
                     List<String> equityMfList = initEquityList(taxpnlFile);
                     processEquity(taxpnlFile, equityMfList);
                     processDebt(taxpnlFile, equityMfList);
+                    processDividend(taxpnlFile);
                     break;
-                case "3":
+                case "2":
                     processEpfoTax();
                     break;
             }
@@ -98,7 +93,7 @@ public class Main {
                 }
             }
         }
-        System.out.println(equityMfList);
+        //System.out.println(equityMfList);
         return equityMfList;
     }
 
@@ -197,12 +192,11 @@ public class Main {
         Map<String, Float> quarterlyDividendMap = new HashMap<>();
         float runningTotal = 0.0f;
         for (List<String> rowData : resultData) {
-
             Float amount = Float.valueOf(rowData.get(5));
             runningTotal = runningTotal + amount;
             LocalDate divdendDate = LocalDate.parse(rowData.get(2));
             String quarter = getQuarter(divdendDate);
-            System.out.println(rowData + " " + quarter);
+            //System.out.println(rowData + " " + quarter);
             switch (quarter) {
                 case Q1: {
                     Float value = quarterlyDividendMap.getOrDefault(Q1, 0.0f);
@@ -262,20 +256,37 @@ public class Main {
         float stcgFullValueConsideration = 0.0f;
         float stcgCostAquisition = 0.0f;
 
+        float stcgSTT = 0.0f;
+        float ltcgSTT = 0.0f;
+
         for (List<String> rowData : resultData) {
             //System.out.println(rowData);
+            String symbol = rowData.get(0);
             Float profit = Float.valueOf(rowData.get(7));
             LocalDate buyDate = LocalDate.parse(rowData.get(2));
             LocalDate exitDate = LocalDate.parse(rowData.get(3));
+            Float buyValue = Float.valueOf(rowData.get(5));
+            Float sellValue = Float.valueOf(rowData.get(6));
+
             Float periodOfHolding = Float.valueOf(rowData.get(8));
             if (periodOfHolding > EQ_LONG_TERM) {
                 runningLTCGProfit = runningLTCGProfit + profit;
-                ltcgFullValueConsideration = ltcgFullValueConsideration + Float.valueOf(rowData.get(6));
-                ltcgCostAquisition = ltcgCostAquisition + Float.valueOf(rowData.get(5));
+                ltcgFullValueConsideration = ltcgFullValueConsideration + sellValue;
+                ltcgCostAquisition = ltcgCostAquisition + buyValue;
+                if (!equityMfList.contains(symbol)) {
+                    ltcgSTT = ltcgSTT + 15.93f;
+                    ltcgSTT = ltcgSTT + (buyValue * 0.00102f);
+                    ltcgSTT = ltcgSTT + (sellValue * 0.00102f);
+                }
             } else {
                 runningSTCGProfit = runningSTCGProfit + profit;
-                stcgFullValueConsideration = stcgFullValueConsideration + Float.valueOf(rowData.get(6));
-                stcgCostAquisition = +stcgCostAquisition + Float.valueOf(rowData.get(5));
+                stcgFullValueConsideration = stcgFullValueConsideration + sellValue;
+                stcgCostAquisition = +stcgCostAquisition + buyValue;
+                if (!equityMfList.contains(symbol)) {
+                    stcgSTT = stcgSTT + 15.93f;
+                    stcgSTT = stcgSTT + (buyValue * 0.00102f);
+                    stcgSTT = stcgSTT + (sellValue * 0.00102f);
+                }
             }
             String quarter = getQuarter(exitDate);
             switch (quarter) {
@@ -340,6 +351,7 @@ public class Main {
         System.out.println();
         System.out.println("Equity LTCG Tax (10% after 1 Lakh) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + ltcgFullValueConsideration);
+        System.out.println("Charges: " + ltcgSTT);
         System.out.println("Cost of acquisition: " + ltcgCostAquisition);
         System.out.println("Profit: " + (ltcgFullValueConsideration - ltcgCostAquisition));
         System.out.println("Quarter: " + longTermGainQuarterlyMap);
@@ -349,6 +361,7 @@ public class Main {
         System.out.println();
         System.out.println("Equity STCG Tax (15%) Breakup");
         System.out.println("Full Value of Consideration (Total Sale Value): " + stcgFullValueConsideration);
+        System.out.println("Charges: " + stcgSTT);
         System.out.println("Cost of acquisition: " + stcgCostAquisition);
         System.out.println("Profit: " + (stcgFullValueConsideration - stcgCostAquisition));
         System.out.println("Quarter: " + shortTermGainQuarterlyMap);
@@ -573,7 +586,7 @@ public class Main {
         List<List<String>> resultData = new ArrayList<>();
         try (FileInputStream file = new FileInputStream(new File(fileName))) {
             XSSFWorkbook workbook = new XSSFWorkbook(file);
-            XSSFSheet sheet = workbook.getSheetAt(0);
+            XSSFSheet sheet = workbook.getSheetAt(9);
             Iterator<Row> rowIterator = sheet.iterator();
             Boolean startProcessing = false;
             Boolean endProcessing = false;
